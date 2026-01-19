@@ -1,0 +1,62 @@
+# Source files
+src/
+tsconfig.json
+
+# Tests (source and compiled)
+*.spec.ts
+*.test.ts
+**/*.spec.js
+**/*.spec.d.ts
+**/*.spec.js.map
+coverage/
+jest.config.js
+
+# Build tools
+.eslintrc.js
+.prettierrc
+.prettierignore
+.eslintignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Docs (include only README)
+docs/
+TEST_COVERAGE.md
+AUTO_CATEGORIZATION.md
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Misc
+.env
+.env.local
+.env.*.local
+*.tgz
