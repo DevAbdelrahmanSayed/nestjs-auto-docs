@@ -112,8 +112,89 @@ AutoDocsModule.forRoot({
 ```
 
 The documentation will include separate server URLs for each version:
-- `http://localhost:3000/api/v1`
-- `http://localhost:3000/api/v2`
+- `/api/v1` - API Version 1
+- `/api/v2` - API Version 2
+
+By default, relative paths are used. To add environment-specific URLs, use the `servers` option (see "Configuring Server URLs" below).
+
+## Configuring Server URLs
+
+By default, the package generates relative server URLs (e.g., `/api/v1`). To add your own server URLs for different environments:
+
+### Single Environment
+
+```typescript
+AutoDocsModule.forRoot({
+  title: 'My API',
+  version: '1.0.0',
+  globalPrefix: '/api/v1',
+  servers: [
+    {
+      url: 'https://api.example.com/api/v1',
+      description: 'Production Server',
+    },
+  ],
+})
+```
+
+### Multiple Environments
+
+```typescript
+AutoDocsModule.forRoot({
+  title: 'My API',
+  version: '1.0.0',
+  globalPrefix: '/api/v1',
+  servers: [
+    {
+      url: 'http://localhost:3000/api/v1',
+      description: 'Local Development',
+    },
+    {
+      url: 'https://staging-api.example.com/api/v1',
+      description: 'Staging Environment',
+    },
+    {
+      url: 'https://api.example.com/api/v1',
+      description: 'Production Server',
+    },
+  ],
+})
+```
+
+### With Versioning Enabled
+
+When versioning is enabled, you can specify servers for each version:
+
+```typescript
+AutoDocsModule.forRoot({
+  title: 'My API',
+  version: '2.0.0',
+  versioning: {
+    enabled: true,
+    prefix: '/api',
+  },
+  servers: [
+    {
+      url: 'http://localhost:3000/api/v1',
+      description: 'Local - API V1',
+    },
+    {
+      url: 'http://localhost:3000/api/v2',
+      description: 'Local - API V2',
+    },
+    {
+      url: 'https://api.example.com/api/v1',
+      description: 'Production - API V1',
+    },
+    {
+      url: 'https://api.example.com/api/v2',
+      description: 'Production - API V2',
+    },
+  ],
+})
+```
+
+**Note:** When you provide the `servers` option, it overrides the auto-generated servers. If you don't provide it, the package will automatically generate relative URLs based on your `globalPrefix` or `versioning` configuration.
 
 ## Configuration Options
 
@@ -125,6 +206,11 @@ interface AutoDocsOptions {
 
   // Optional
   description?: string;             // API description
+  contact?: {                       // Contact information
+    name?: string;
+    email?: string;
+    url?: string;
+  };
   sourcePath?: string;              // Source code path (default: 'src')
   globalPrefix?: string;            // API prefix (e.g., '/api/v1')
   docsPath?: string;                // Docs UI path (default: '/docs')
@@ -169,6 +255,21 @@ AutoDocsModule.forRoot({
 })
 ```
 
+### With Contact Information
+
+```typescript
+AutoDocsModule.forRoot({
+  title: 'My API',
+  version: '1.0.0',
+  description: 'RESTful API for my application',
+  contact: {
+    name: 'API Support Team',
+    email: 'support@example.com',
+    url: 'https://example.com/support',
+  },
+})
+```
+
 ### With Custom Theme
 
 ```typescript
@@ -180,29 +281,6 @@ AutoDocsModule.forRoot({
     darkMode: true,
     logo: 'https://example.com/logo.png',
   },
-})
-```
-
-### With Multiple Servers
-
-```typescript
-AutoDocsModule.forRoot({
-  title: 'My API',
-  version: '1.0.0',
-  servers: [
-    {
-      url: 'http://localhost:3000',
-      description: 'Local development',
-    },
-    {
-      url: 'https://staging-api.example.com',
-      description: 'Staging environment',
-    },
-    {
-      url: 'https://api.example.com',
-      description: 'Production',
-    },
-  ],
 })
 ```
 
