@@ -27,10 +27,7 @@ export class OpenApiGenerator {
         title: options.title,
         version: options.version,
         description: options.description || 'Auto-generated API documentation',
-        contact: {
-          name: 'API Support',
-          email: 'support@corteksa.com',
-        },
+        ...(options.contact && { contact: options.contact }),
       },
       servers: options.servers || this.generateDefaultServers(options, controllers),
       tags: Array.from(this.tags.values()).sort((a, b) => a.name.localeCompare(b.name)),
@@ -58,31 +55,13 @@ export class OpenApiGenerator {
    */
   private generateTags(controllers: ControllerMetadata[]): void {
     const categorySet = new Set<string>();
-    const categoryDescriptions: Record<string, string> = {
-      'Administration': 'Admin panel operations including user management, roles, and permissions',
-      'Admin Authentication': 'Admin authentication endpoints for login, logout, and token management',
-      'Admin Management': 'Admin user management and configuration',
-      'User Management': 'User account operations including registration, profiles, and preferences',
-      'User Authentication': 'User authentication endpoints for login, registration, and password management',
-      'Messaging Platform': 'Multi-provider messaging integration (WhatsApp, Facebook Messenger)',
-      'CRM Object Management': 'Dynamic CRM objects, fields, relations, and data management',
-      'Notifications & Audit': 'Notification system and audit trail for tracking changes',
-      'Webhooks': 'Webhook configuration and delivery management',
-      'Multi-Tenancy': 'Tenant management and workspace isolation',
-      'Integrations': 'Third-party integrations and external service connections',
-      'Backup & Restore': 'Database backup and restore operations',
-      'Waitlist': 'Waitlist management for early access programs',
-      'Docs': 'API documentation and specification endpoints',
-      'App': 'General application endpoints and health checks',
-    };
 
     for (const controller of controllers) {
       if (controller.category && !categorySet.has(controller.category)) {
         categorySet.add(controller.category);
 
-        // Use custom description or generate from category name
-        const description = categoryDescriptions[controller.category] ||
-                          controller.description ||
+        // Use controller description or generate from category name
+        const description = controller.description ||
                           `${controller.category} related endpoints`;
 
         this.tags.set(controller.category, {
@@ -416,42 +395,32 @@ export class OpenApiGenerator {
       if (versions.size > 0) {
         const versionPrefix = options.versioning.prefix || '/api';
         for (const version of Array.from(versions).sort()) {
-          servers.push(
-            {
-              url: `http://localhost:3000${versionPrefix}/${version}`,
-              description: `Local development server (${version.toUpperCase()})`,
-            },
-            {
-              url: `https://api.corteksa.com${versionPrefix}/${version}`,
-              description: `Production server (${version.toUpperCase()})`,
-            },
-          );
+          servers.push({
+            url: `${versionPrefix}/${version}`,
+            description: `API ${version.toUpperCase()}`,
+          });
         }
       } else if (options.versioning.fallback) {
         // Use fallback if no versions detected
-        servers.push(
-          {
-            url: `http://localhost:3000${options.versioning.fallback}`,
-            description: 'Local development server',
-          },
-          {
-            url: `https://api.corteksa.com${options.versioning.fallback}`,
-            description: 'Production server',
-          },
-        );
+        servers.push({
+          url: options.versioning.fallback,
+          description: 'API Server',
+        });
       }
-    } else {
+    } else if (options.globalPrefix) {
       // Use globalPrefix (backwards compatible)
-      servers.push(
-        {
-          url: `http://localhost:3000${options.globalPrefix || ''}`,
-          description: 'Local development server',
-        },
-        {
-          url: `https://api.corteksa.com${options.globalPrefix || ''}`,
-          description: 'Production server',
-        },
-      );
+      servers.push({
+        url: options.globalPrefix,
+        description: 'API Server',
+      });
+    }
+
+    // If no servers generated, return a relative path server
+    if (servers.length === 0) {
+      servers.push({
+        url: '/',
+        description: 'Current Server',
+      });
     }
 
     return servers;

@@ -15,6 +15,15 @@ export interface AutoDocsOptions {
   description?: string;
 
   /**
+   * Contact information for API support (optional)
+   */
+  contact?: {
+    name?: string;
+    email?: string;
+    url?: string;
+  };
+
+  /**
    * Source directory to scan for controllers
    * @default 'src'
    */

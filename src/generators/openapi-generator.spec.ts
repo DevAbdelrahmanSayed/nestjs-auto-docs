@@ -40,8 +40,8 @@ describe('OpenApiGenerator', () => {
 
       // Should use globalPrefix, not detected version
       expect(spec.paths).toHaveProperty('api/v1/admin/profile');
-      expect(spec.servers).toHaveLength(2);
-      expect(spec.servers[0].url).toBe('http://localhost:3000/api/v1');
+      expect(spec.servers).toHaveLength(1);
+      expect(spec.servers[0].url).toBe('/api/v1');
     });
   });
 
@@ -80,8 +80,8 @@ describe('OpenApiGenerator', () => {
       // Should use detected version
       expect(spec.paths).toHaveProperty('api/v1/admin/profile');
       expect(spec.servers).toContainEqual({
-        url: 'http://localhost:3000/api/v1',
-        description: 'Local development server (V1)',
+        url: '/api/v1',
+        description: 'API V1',
       });
     });
 
@@ -136,15 +136,15 @@ describe('OpenApiGenerator', () => {
       expect(spec.paths).toHaveProperty('api/v1/admin/profile');
       expect(spec.paths).toHaveProperty('api/v2/admin/profile');
 
-      // Should have servers for both versions (4 total: 2 per version)
-      expect(spec.servers).toHaveLength(4);
+      // Should have servers for both versions (2 total: 1 per version)
+      expect(spec.servers).toHaveLength(2);
       expect(spec.servers).toContainEqual({
-        url: 'http://localhost:3000/api/v1',
-        description: 'Local development server (V1)',
+        url: '/api/v1',
+        description: 'API V1',
       });
       expect(spec.servers).toContainEqual({
-        url: 'http://localhost:3000/api/v2',
-        description: 'Local development server (V2)',
+        url: '/api/v2',
+        description: 'API V2',
       });
     });
 
@@ -182,8 +182,8 @@ describe('OpenApiGenerator', () => {
 
       // Should use fallback
       expect(spec.paths).toHaveProperty('api/v1/admin/profile');
-      expect(spec.servers).toHaveLength(2);
-      expect(spec.servers[0].url).toBe('http://localhost:3000/api/v1');
+      expect(spec.servers).toHaveLength(1);
+      expect(spec.servers[0].url).toBe('/api/v1');
     });
 
     it('should handle custom version prefix', () => {
@@ -219,7 +219,7 @@ describe('OpenApiGenerator', () => {
 
       // Should use custom prefix
       expect(spec.paths).toHaveProperty('rest/api/v1/admin/profile');
-      expect(spec.servers[0].url).toBe('http://localhost:3000/rest/api/v1');
+      expect(spec.servers[0].url).toBe('/rest/api/v1');
     });
   });
 

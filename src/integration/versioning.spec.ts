@@ -57,8 +57,8 @@ describe('Versioning Integration', () => {
 
       // Verify server URLs
       expect(spec.servers).toContainEqual({
-        url: 'http://localhost:3000/api/v1',
-        description: 'Local development server (V1)',
+        url: '/api/v1',
+        description: 'API V1',
       });
     });
 
@@ -187,19 +187,19 @@ describe('Versioning Integration', () => {
       expect(spec.paths).toHaveProperty('api/v2/admin/profile');
       expect(spec.paths).toHaveProperty('api/v2/user/profile');
 
-      // Should have 4 servers (2 for v1, 2 for v2)
-      expect(spec.servers).toHaveLength(4);
+      // Should have 2 servers (1 for v1, 1 for v2)
+      expect(spec.servers).toHaveLength(2);
 
       // Verify v1 servers
       expect(spec.servers).toContainEqual({
-        url: 'http://localhost:3000/api/v1',
-        description: 'Local development server (V1)',
+        url: '/api/v1',
+        description: 'API V1',
       });
 
       // Verify v2 servers
       expect(spec.servers).toContainEqual({
-        url: 'http://localhost:3000/api/v2',
-        description: 'Local development server (V2)',
+        url: '/api/v2',
+        description: 'API V2',
       });
     });
   });
@@ -241,7 +241,7 @@ describe('Versioning Integration', () => {
 
       // Should use globalPrefix, not detected version
       expect(spec.paths).toHaveProperty('api/v1/admin/profile');
-      expect(spec.servers[0].url).toBe('http://localhost:3000/api/v1');
+      expect(spec.servers[0].url).toBe('/api/v1');
     });
 
     it('should ignore version when versioning disabled', () => {
@@ -293,9 +293,9 @@ describe('Versioning Integration', () => {
       // This demonstrates backwards compatibility
       expect(spec.paths).toHaveProperty('api/v1/admin/profile');
 
-      // Should have standard 2 servers
-      expect(spec.servers).toHaveLength(2);
-      expect(spec.servers[0].url).toBe('http://localhost:3000/api/v1');
+      // Should have standard 1 server (no versioning, just globalPrefix)
+      expect(spec.servers).toHaveLength(1);
+      expect(spec.servers[0].url).toBe('/api/v1');
     });
   });
 });
