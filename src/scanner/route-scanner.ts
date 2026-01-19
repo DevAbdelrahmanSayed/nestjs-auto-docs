@@ -93,14 +93,27 @@ export class RouteScanner {
       if (bodyDecorator) {
         const paramType = param.getType();
         const typeName = paramType.getText();
+
+        // Skip primitive types
+        if (['string', 'number', 'boolean', 'any', 'unknown', 'string | undefined'].includes(typeName)) {
+          return undefined;
+        }
+
         console.log(`[AUTO-DOCS] Found @Body parameter with type: ${typeName}`);
 
-        // Find the DTO class
+        // Try to find DTO class
         const dtoClass = this.findDtoClass(typeName);
-        if (!dtoClass) console.log(`[AUTO-DOCS] Could not find DTO class for type: ${typeName}`);
         if (dtoClass) {
           return this.analyzeDtoClass(dtoClass);
         }
+
+        // If not a class, try to analyze inline object type
+        const inlineDto = this.analyzeInlineType(paramType, typeName);
+        if (inlineDto) {
+          return inlineDto;
+        }
+
+        console.log(`[AUTO-DOCS] Could not analyze type: ${typeName}`);
       }
     }
 
@@ -111,13 +124,18 @@ export class RouteScanner {
    * Extract response type from method return type
    */
   private extractResponseType(method: MethodDeclaration): DtoMetadata | undefined {
-    const returnType = method.getReturnType();
+    let returnType = method.getReturnType();
     let typeName = returnType.getText();
 
     // Remove Promise<> wrapper
-    const promiseMatch = typeName.match(/Promise<(.+)>/);
+    const promiseMatch = typeName.match(/Promise<(.+)>$/);
     if (promiseMatch) {
       typeName = promiseMatch[1];
+      // Get the unwrapped type
+      const typeArgs = returnType.getTypeArguments();
+      if (typeArgs.length > 0) {
+        returnType = typeArgs[0];
+      }
     }
 
     // Skip primitive types and void
@@ -125,14 +143,119 @@ export class RouteScanner {
       return undefined;
     }
 
-    // Find the DTO class
+    // Try to find DTO class
     const dtoClass = this.findDtoClass(typeName);
-        if (!dtoClass) console.log(`[AUTO-DOCS] Could not find DTO class for type: ${typeName}`);
     if (dtoClass) {
       return this.analyzeDtoClass(dtoClass);
     }
 
+    // If not a class, try to analyze inline object type
+    const inlineDto = this.analyzeInlineType(returnType, typeName);
+    if (inlineDto) {
+      return inlineDto;
+    }
+
+    console.log(`[AUTO-DOCS] Could not analyze return type: ${typeName}`);
     return undefined;
+  }
+
+  /**
+   * Analyze inline object types and union types
+   */
+  private analyzeInlineType(type: any, typeName: string): DtoMetadata | undefined {
+    // Handle union types - try to find the first analyzable type
+    if (type.isUnion()) {
+      const unionTypes = type.getUnionTypes();
+      for (const unionType of unionTypes) {
+        const unionTypeName = unionType.getText();
+
+        // Skip null, undefined, and primitive types
+        if (['null', 'undefined', 'void'].includes(unionTypeName)) {
+          continue;
+        }
+
+        // Try to analyze this union member
+        const dtoClass = this.findDtoClass(unionTypeName);
+        if (dtoClass) {
+          return this.analyzeDtoClass(dtoClass);
+        }
+
+        // Try to analyze as inline type
+        if (unionType.isObject()) {
+          const inlineDto = this.analyzeInlineObjectType(unionType, unionTypeName);
+          if (inlineDto && inlineDto.properties.length > 0) {
+            return inlineDto;
+          }
+        }
+      }
+      return undefined;
+    }
+
+    // Handle inline object types
+    if (type.isObject()) {
+      return this.analyzeInlineObjectType(type, typeName);
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Analyze inline object type literal (e.g., { message: string; data: any })
+   */
+  private analyzeInlineObjectType(type: any, typeName: string): DtoMetadata | undefined {
+    try {
+      const properties: PropertyMetadata[] = [];
+      const typeProperties = type.getProperties();
+
+      if (!typeProperties || typeProperties.length === 0) {
+        return undefined;
+      }
+
+      // Get the compiler type and type checker
+      const compilerType = type.compilerType;
+      const checker = this.project.getTypeChecker().compilerObject;
+
+      for (const prop of typeProperties) {
+        const propName = prop.getName();
+
+        // Get the property symbol, then its type
+        const propSymbol = checker.getPropertyOfType(compilerType, propName);
+
+        if (propSymbol) {
+          const propCompilerType = checker.getTypeOfSymbol(propSymbol);
+
+          if (propCompilerType) {
+            // Wrap the compiler type back into a ts-morph Type using the context's factory
+            const propType = type._context.compilerFactory.getType(propCompilerType);
+
+            const typeMetadata = this.dtoAnalyzer.analyzeType(propType);
+            const isOptional = propType.isNullable() || propType.isUndefined();
+
+            properties.push({
+              name: propName,
+              type: typeMetadata,
+              required: !isOptional,
+              description: undefined,
+              validators: [],
+              example: this.generateExampleValue(propName, typeMetadata),
+            });
+          }
+        }
+      }
+
+      if (properties.length === 0) {
+        return undefined;
+      }
+
+      return {
+        name: 'InlineType',
+        properties,
+        description: undefined,
+      };
+    } catch (error) {
+      // If we can't analyze the inline type, return undefined
+      return undefined;
+    }
   }
 
   /**
@@ -143,11 +266,23 @@ export class RouteScanner {
     let cleanTypeName = typeName.replace(/\[\]$/, '').trim();
 
     // Extract class name from import path: import("/path/to/dto").DtoName -> DtoName
-    const importMatch = cleanTypeName.match(/import\(.+\)\.(\w+)/);
+    const importMatch = cleanTypeName.match(/import\(["'](.+?)["']\)\.(\w+)/);
     if (importMatch) {
-      cleanTypeName = importMatch[1];
+      const importPath = importMatch[1];
+      cleanTypeName = importMatch[2];
+
+      // Try to find the source file by import path
+      const sourceFile = this.project.getSourceFile(importPath + '.ts') ||
+                         this.project.getSourceFile(importPath + '.dto.ts');
+
+      if (sourceFile) {
+        const classes = sourceFile.getClasses();
+        const found = classes.find(cls => cls.getName() === cleanTypeName);
+        if (found) return found;
+      }
     }
 
+    // Fallback: search all source files
     const sourceFiles = this.project.getSourceFiles();
     return this.dtoAnalyzer.findDtoByName(cleanTypeName, sourceFiles);
   }
@@ -351,7 +486,6 @@ export class RouteScanner {
 
     const paramType = param.getType();
     const typeName = paramType.getText();
-        console.log(`[AUTO-DOCS] Found @Body parameter with type: ${typeName}`);
 
     // Determine parameter location
     let location: 'path' | 'query' | 'header' | 'body' = 'query';
